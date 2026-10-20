@@ -76,7 +76,7 @@ deploy by hand.
 
 Once both files are in, click **Check the connection** on Decidio's setup page, or run *Ask Decidio to deploy* from the
 repository's **Actions** tab. A run started that way (`workflow_dispatch`) is a connection check: Decidio confirms the
-repository, the job's identity and the environment, and the job says **Connected**. It asks for nothing and creates no record.
+repository, the job's identity and the environment, and the job says **Connected**. It asks for nothing and creates no deploy record.
 Your next push asks a teammate to approve its deploy.
 
 ## Pin it to a commit
