@@ -45,6 +45,13 @@ if [[ "$status" == "200" && ( "$decision" == "route" || "$decision" == "proceed"
   [[ "$(field existing)" == "true" ]] && echo "An approval request for this commit was already open - that one stands."
   exit 0
 fi
+# A run started by hand or by Decidio's "Check the connection" (workflow_dispatch) is a CONNECTION CHECK: Decidio confirms this
+# repository, this job's identity and the environment, and asks for nothing - no deploy request, no record.
+if [[ "$status" == "200" && "$decision" == "connected" ]]; then
+  [[ -n "${GITHUB_OUTPUT:-}" ]] && echo "decision=connected" >> "$GITHUB_OUTPUT"
+  echo "::notice title=Decidio::Connected - Decidio heard this repository ask for $env_name. This check asked for nothing; the next push asks a teammate to approve its deploy."
+  exit 0
+fi
 if [[ "$status" == "200" && "$decision" == "duplicate" ]]; then
   fail "$(say "${why:-a teammate refused this commit before}") - to ask again, set the justification input to what changed"
 fi

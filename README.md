@@ -13,13 +13,18 @@ in for you.
 
 ## The two workflows
 
-`.github/workflows/decidio-request.yml` asks for approval on each push. It can only ask.
+`.github/workflows/decidio-request.yml` asks for approval on each push. It can only ask. A push that changes only these two
+workflow files asks for nothing, so adding them never creates a deploy request.
 
 ```yaml
 name: Ask Decidio to deploy
 on:
   push:
     branches: [main]
+    paths-ignore:
+      - .github/workflows/decidio-request.yml
+      - .github/workflows/deploy.yml
+  workflow_dispatch:
 permissions:
   id-token: write
   contents: read
@@ -67,6 +72,13 @@ jobs:
 Then, in the repository's **Settings → Actions**, allow only the Decidio app to run the deploy workflow, so nobody can start a
 deploy by hand.
 
+## Check the connection
+
+Once both files are in, click **Check the connection** on Decidio's setup page, or run *Ask Decidio to deploy* from the
+repository's **Actions** tab. A run started that way (`workflow_dispatch`) is a connection check: Decidio confirms the
+repository, the job's identity and the environment, and the job says **Connected**. It asks for nothing and creates no record.
+Your next push asks a teammate to approve its deploy.
+
 ## Pin it to a commit
 
 The verify step guards your production deploy, so pin it to a full commit, never a tag. Replace `<full commit sha>` above
@@ -87,7 +99,7 @@ the current one for you. There is no `v1` tag to follow on purpose. Let Dependab
 
 | Output | Step | Meaning |
 |---|---|---|
-| `decision` | request | `route` (a teammate approves next) or `proceed` (no approval needed; Decidio starts the deploy) |
+| `decision` | request | `route` (a teammate approves next), `proceed` (no approval needed; Decidio starts the deploy), or `connected` (a connection check: nothing was asked) |
 | `decision-id`, `url` | request | The request in Decidio |
 | `sha` | verify | The approved commit: check out and deploy exactly this |
 
