@@ -42,13 +42,16 @@ jobs:
 
 ```yaml
 name: Deploy
-run-name: Decidio ${{ inputs.decidio }}
+run-name: ${{ inputs.title || format('Decidio {0}', inputs.decidio) }}
 on:
   workflow_dispatch:
     inputs:
       decidio:
         description: Set by Decidio
         required: true
+      title:
+        description: Set by Decidio (the run's name - its record, environment and commit)
+        required: false
 permissions:
   id-token: write
   contents: read

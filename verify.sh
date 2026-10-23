@@ -28,6 +28,26 @@ if [[ "$status" == "200" && "$(field ok)" == "true" && "$sha" =~ ^[0-9a-f]{40}$ 
   [[ -n "${GITHUB_OUTPUT:-}" ]] && { echo "sha=$sha"; echo "decision=$decision"; } >> "$GITHUB_OUTPUT"
   number="$(field displayNumber)"
   echo "::notice title=Decidio::Approved - deploying ${sha:0:12} to $(say "$(field environment)") ($(say "${number:-$decision}")). This approval is now used."
+  # The run's summary (v1.1): the record, who approved it and when, the commit, the environment and the risk - Decidio's words, kept to
+  # one line each and stripped of anything Markdown would read as a link, a table cell, markup or a mention.
+  if [[ -n "${GITHUB_STEP_SUMMARY:-}" ]]; then
+    md() { printf '%s' "$1" | tr -d '\r\n' | tr -d '|<>`@[]()*_\\#!' | sed 's#://#: //#g; s#www\.#www #g' | cut -c1-240; }
+    url="$(field url)"; at="$(field approvedAt)"; by="$(field approvedBy)"; risk="$(field risk)"
+    record="$(md "${number:-$decision}")" || record="$decision"   # never fail the step: the approval is already used
+    [[ "$url" =~ ^https://[A-Za-z0-9.-]+(:[0-9]{1,5})?/d/[A-Za-z0-9_-]{1,64}$ ]] && record="[$record]($url)"
+    if [[ "$at" =~ ^([0-9]{4}-[0-9]{2}-[0-9]{2})T([0-9]{2}:[0-9]{2}) ]]; then at="${BASH_REMATCH[1]} ${BASH_REMATCH[2]} UTC"; else at=""; fi
+    {
+      echo "### Approved in Decidio"
+      echo ""
+      echo "| | |"
+      echo "|---|---|"
+      echo "| Record | $record |"
+      [[ -n "$by" ]] && echo "| Approved by | $(md "$by")${at:+ at $at} |"
+      echo "| Commit | \`${sha:0:12}\` |"
+      echo "| Environment | $(md "$(field environment)") |"
+      [[ -n "$risk" ]] && echo "| Risk | $(md "$risk") |"
+    } >> "$GITHUB_STEP_SUMMARY" || true
+  fi
   exit 0
 fi
 code="$(field code)"; why="$(field error)"
