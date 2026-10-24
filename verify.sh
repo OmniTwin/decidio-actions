@@ -5,7 +5,7 @@
 # it runs - do not deploy. Inputs arrive as environment variables only; the identity token is masked.
 set -euo pipefail
 # v1.3: this action's version, sent with the verify so Decidio can say when a newer one is available.
-ACTION_VERSION="1.3.0"
+ACTION_VERSION="1.3.1"
 fail() { echo "::error title=Decidio::$1 - do not deploy" >&2; exit 1; }
 api="${DECIDIO_API_URL%/}"
 decision="${DECIDIO_DECISION:-}"

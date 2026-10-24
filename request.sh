@@ -6,7 +6,7 @@
 # Inputs arrive as environment variables only - never interpolated into this script - and the identity token is masked.
 set -euo pipefail
 # v1.3: this action's version, sent with every request so Decidio can say when a newer one is available.
-ACTION_VERSION="1.3.0"
+ACTION_VERSION="1.3.1"
 fail() { echo "::error title=Decidio::$1" >&2; exit 1; }
 api="${DECIDIO_API_URL%/}"
 env_name="${DECIDIO_ENVIRONMENT:-}"
@@ -77,7 +77,10 @@ if [[ "$status" == "200" && ( "$decision" == "route" || "$decision" == "proceed"
     {
       if [[ "$decision" == "proceed" ]]; then echo "### No approval needed in Decidio"; else echo "### Waiting for approval in Decidio"; fi
       echo ""
-      [[ -n "$record" ]] && echo "Record: $record - Decidio starts the deploy to $env_name once it's approved." && echo ""
+      if [[ -n "$record" ]]; then
+        if [[ "$decision" == "proceed" ]]; then echo "Record: $record - Decidio starts the deploy to $env_name."; else echo "Record: $record - Decidio starts the deploy to $env_name once it's approved."; fi
+        echo ""
+      fi
       echo "_Deploy approvals by [Decidio](https://decidioai.com)_"
     } >> "$GITHUB_STEP_SUMMARY" || true
   fi
