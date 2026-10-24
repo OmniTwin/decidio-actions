@@ -21,7 +21,31 @@ token="$(curl -sS --fail --max-time 30 -H "Authorization: bearer $ACTIONS_ID_TOK
   || fail "GitHub did not issue this job's identity token"
 [[ -n "$token" ]] || fail "GitHub did not issue this job's identity token"
 echo "::add-mask::$token"
-body="$(jq -cn --arg e "$env_name" --arg j "$just" '{environment: $e} + (if $j == "" then {} else {justification: $j} end)')"
+# v1.2: a push's changed files - names and added/removed line counts, never the code. Decidio holds no permission to read code, so
+# GitHub lists the files of a push that came from no pull request only to the repository's own workflow: read here with THIS job's
+# token (the ask file grants contents: read; it is sent to GitHub only, never to Decidio) and sent with the request. Decidio shows
+# them as the workflow reported them and never sets the risk tier from them. Best effort: anything missing or refused, and the
+# request goes on without them.
+files='null'
+gh_api="${GITHUB_API_URL:-https://api.github.com}"
+if [[ "${GITHUB_EVENT_NAME:-}" == "push" && -n "${DECIDIO_GITHUB_TOKEN:-}" && -n "${GITHUB_EVENT_PATH:-}" && -r "${GITHUB_EVENT_PATH:-}" ]]; then
+  before="$(jq -r '.before // empty' "$GITHUB_EVENT_PATH" 2>/dev/null || true)"
+  if [[ "$before" =~ ^[0-9a-f]{40}$ && ! "$before" =~ ^0+$ && "${GITHUB_SHA:-}" =~ ^[0-9a-f]{40}$ && "${GITHUB_REPOSITORY:-}" =~ ^[A-Za-z0-9._-]+/[A-Za-z0-9._-]+$ ]] \
+    && [[ "$gh_api" =~ ^https://[A-Za-z0-9.-]+(:[0-9]{1,5})?(/[A-Za-z0-9._/-]*)?$ || "$gh_api" =~ ^http://127\.0\.0\.1(:[0-9]{1,5})?$ ]]; then
+    cmp="$(mktemp)"
+    if curl -sS --fail --max-time 20 -o "$cmp" -H "Authorization: Bearer $DECIDIO_GITHUB_TOKEN" -H "Accept: application/vnd.github+json" \
+      "${gh_api%/}/repos/$GITHUB_REPOSITORY/compare/$before...$GITHUB_SHA" 2>/dev/null; then
+      # GitHub lists at most 300 files of a compare: 100 are sent, the rest counted; 300 listed means there may be more.
+      files="$(jq -c '(.files // []) as $f | {files: [$f[:100][] | {path: .filename, add: .additions, del: .deletions}], more: ([($f | length) - 100, 0] | max), lowerBound: (($f | length) >= 300)}' "$cmp" 2>/dev/null || echo null)"
+      [[ -n "$files" ]] || files='null'
+    else
+      echo "Files changed aren't sent: this job's token couldn't read the push from GitHub (the ask workflow needs 'permissions: contents: read')."
+    fi
+    rm -f "$cmp"
+  fi
+fi
+body="$(jq -cn --arg e "$env_name" --arg j "$just" --argjson f "$files" '{environment: $e} + (if $j == "" then {} else {justification: $j} end)
+  + (if $f == null then {} else {files: $f.files, filesMore: $f.more, filesLowerBound: $f.lowerBound} end)')"
 out="$(mktemp)"
 status="$(curl -sS --max-time 60 -o "$out" -w '%{http_code}' -X POST "$api/api/github/runs/request" \
   -H "Authorization: Bearer $token" -H "Content-Type: application/json" -H "X-Decidio-Client: action-request/1" --data "$body")" \

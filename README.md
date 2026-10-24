@@ -82,6 +82,14 @@ repository's **Actions** tab. A run started that way (`workflow_dispatch`) is a 
 repository, the job's identity and the environment, and the job says **Connected**. It asks for nothing and creates no deploy record.
 Your next push asks a teammate to approve its deploy.
 
+## What the request sends
+
+The request sends the environment, and for a push, the files it changed: each file's name and its added and removed line
+counts, never the code. GitHub only shows a push's files to apps that can read code, and the Decidio app can't, so the request
+step reads them with this job's own token (the `contents: read` above). That token is used only to call GitHub and is never sent
+to Decidio. Approvers see the list labelled as your workflow's report, and Decidio doesn't use it to set the risk level. If the
+token can't read the push, the request goes ahead without the list.
+
 ## Pin it to a commit
 
 The verify step guards your production deploy, so pin it to a full commit, never a tag. Replace `<full commit sha>` above

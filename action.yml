@@ -48,4 +48,6 @@ runs:
         DECIDIO_JUSTIFICATION: ${{ inputs.justification }}
         DECIDIO_DECISION: ${{ inputs.decision }}
         DECIDIO_API_URL: ${{ inputs.api-url }}
+        # v1.2: read a push's changed files from GitHub (names and counts) - this job's own token, sent to GitHub only.
+        DECIDIO_GITHUB_TOKEN: ${{ github.token }}
       run: bash "$GITHUB_ACTION_PATH/run.sh"
