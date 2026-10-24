@@ -87,8 +87,16 @@ Your next push asks a teammate to approve its deploy.
 The request sends the environment, and for a push, the files it changed: each file's name and its added and removed line
 counts, never the code. GitHub only shows a push's files to apps that can read code, and the Decidio app can't, so the request
 step reads them with this job's own token (the `contents: read` above). That token is used only to call GitHub and is never sent
-to Decidio. Approvers see the list labelled as your workflow's report, and Decidio doesn't use it to set the risk level. If the
-token can't read the push, the request goes ahead without the list.
+to Decidio. Approvers see the list labelled as your workflow's report. It can raise the risk level (a migration it lists makes
+the deploy High) but never lower it. If the token can't read the push, the request goes ahead without the list.
+
+Each request and verify also says which version of this action sent it, so Decidio's setup page can tell you when a newer one is
+available and which file to update.
+
+## What it writes on GitHub
+
+The ask run's summary says where the approval is waiting, with a link to the record in Decidio. The deploy run's summary says who
+approved it, when, and the commit, environment and risk. Both end with a line naming Decidio.
 
 ## Pin it to a commit
 

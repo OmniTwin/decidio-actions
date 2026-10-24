@@ -5,6 +5,8 @@
 # Fails (non-zero) when Decidio refuses, blocks by policy, or a person refused this commit before (ask again with a justification).
 # Inputs arrive as environment variables only - never interpolated into this script - and the identity token is masked.
 set -euo pipefail
+# v1.3: this action's version, sent with every request so Decidio can say when a newer one is available.
+ACTION_VERSION="1.3.0"
 fail() { echo "::error title=Decidio::$1" >&2; exit 1; }
 api="${DECIDIO_API_URL%/}"
 env_name="${DECIDIO_ENVIRONMENT:-}"
@@ -48,7 +50,7 @@ body="$(jq -cn --arg e "$env_name" --arg j "$just" --argjson f "$files" '{enviro
   + (if $f == null then {} else {files: $f.files, filesMore: $f.more, filesLowerBound: $f.lowerBound} end)')"
 out="$(mktemp)"
 status="$(curl -sS --max-time 60 -o "$out" -w '%{http_code}' -X POST "$api/api/github/runs/request" \
-  -H "Authorization: Bearer $token" -H "Content-Type: application/json" -H "X-Decidio-Client: action-request/1" --data "$body")" \
+  -H "Authorization: Bearer $token" -H "Content-Type: application/json" -H "X-Decidio-Client: action-request/$ACTION_VERSION" --data "$body")" \
   || fail "could not reach Decidio at $api"
 field() { jq -r --arg k "$1" '.[$k] // empty | tostring' "$out" 2>/dev/null || true; }
 # A server string printed in a log line: one line, no "::" (it could start another workflow command), at most 300 characters.
@@ -67,6 +69,18 @@ if [[ "$status" == "200" && ( "$decision" == "route" || "$decision" == "proceed"
     echo "::notice title=Decidio::Asked - a teammate approves $env_name in Decidio, then Decidio starts the deploy ($ref)"
   fi
   [[ "$(field existing)" == "true" ]] && echo "An approval request for this commit was already open - that one stands."
+  # v1.3: the run's summary says where the approval is waiting, linked to its record (Decidio's own page only) - and by whom it's asked.
+  if [[ -n "${GITHUB_STEP_SUMMARY:-}" ]]; then
+    md() { printf '%s' "$1" | tr -d '\r\n' | tr -d '|<>`@[]()*_\\#!' | sed 's#://#: //#g; s#www\.#www #g' | cut -c1-240; }
+    record="$(md "${number:-$id}")" || record=""
+    [[ -n "$record" && "$url" =~ ^https://[A-Za-z0-9.-]+(:[0-9]{1,5})?/d/[A-Za-z0-9_-]{1,64}$ ]] && record="[$record]($url)"
+    {
+      if [[ "$decision" == "proceed" ]]; then echo "### No approval needed in Decidio"; else echo "### Waiting for approval in Decidio"; fi
+      echo ""
+      [[ -n "$record" ]] && echo "Record: $record - Decidio starts the deploy to $env_name once it's approved." && echo ""
+      echo "_Deploy approvals by [Decidio](https://decidioai.com)_"
+    } >> "$GITHUB_STEP_SUMMARY" || true
+  fi
   exit 0
 fi
 # A run started by hand or by Decidio's "Check the connection" (workflow_dispatch) is a CONNECTION CHECK: Decidio confirms this
