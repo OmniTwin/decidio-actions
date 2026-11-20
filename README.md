@@ -13,8 +13,9 @@ in for you.
 
 ## The two workflows
 
-`.github/workflows/decidio-request.yml` asks for approval on each push. It can only ask. A push that changes only these two
-workflow files asks for nothing, so adding them never creates a deploy request.
+`.github/workflows/decidio-request.yml` asks for approval on each push. It can only ask. Adding the two workflow files never creates a
+deploy request: Decidio answers that push Connected. A push that changes only this file asks for nothing. After your first deploy, a
+change to the deploy workflow asks for its own approval, as High - so the ask file ignores only itself.
 
 ```yaml
 name: Ask Decidio to deploy
@@ -23,7 +24,6 @@ on:
     branches: [main]
     paths-ignore:
       - .github/workflows/decidio-request.yml
-      - .github/workflows/deploy.yml
   workflow_dispatch:
 permissions:
   id-token: write
