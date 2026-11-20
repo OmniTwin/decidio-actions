@@ -6,7 +6,7 @@
 # Inputs arrive as environment variables only - never interpolated into this script - and the identity token is masked.
 set -euo pipefail
 # v1.3: this action's version, sent with every request so Decidio can say when a newer one is available.
-ACTION_VERSION="1.3.1"
+ACTION_VERSION="1.4.0"
 fail() { echo "::error title=Decidio::$1" >&2; exit 1; }
 api="${DECIDIO_API_URL%/}"
 env_name="${DECIDIO_ENVIRONMENT:-}"

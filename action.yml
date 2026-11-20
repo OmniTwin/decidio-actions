@@ -17,7 +17,7 @@ inputs:
     required: false
     default: ""
   decision:
-    description: (verify) The approval Decidio passed when it started this run - set it to the workflow's decidio input.
+    description: "(verify) The approval Decidio passed when it started this run - set it to the workflow's decidio input. A repository admin's own run with emergency: <why> takes the emergency route while Decidio can't be reached (v1.4)."
     required: false
     default: ""
   api-url:
@@ -50,4 +50,12 @@ runs:
         DECIDIO_API_URL: ${{ inputs.api-url }}
         # v1.2: read a push's changed files from GitHub (names and counts) - this job's own token, sent to GitHub only.
         DECIDIO_GITHUB_TOKEN: ${{ github.token }}
+        # v1.4: the emergency route reads who started this run, and how, from GitHub's own context - never from the workflow's env.
+        DECIDIO_GH_EVENT: ${{ github.event_name }}
+        DECIDIO_GH_ACTOR: ${{ github.actor }}
+        DECIDIO_GH_ACTOR_ID: ${{ github.actor_id }}
+        DECIDIO_GH_TRIGGERING_ACTOR: ${{ github.triggering_actor }}
+        DECIDIO_GH_REPOSITORY: ${{ github.repository }}
+        DECIDIO_GH_API_URL: ${{ github.api_url }}
+        DECIDIO_GH_SHA: ${{ github.sha }}
       run: bash "$GITHUB_ACTION_PATH/run.sh"

@@ -129,6 +129,24 @@ the current one for you. There is no `v1` tag to follow on purpose. Let Dependab
 - **verify** fails, and writes no `sha`, whenever the approval cannot be proved: not approved, already used, another commit or
   environment. The job stops there, so nothing deploys. Do not add `continue-on-error` to it.
 
+## When Decidio can't be reached
+
+A repository admin can still deploy, in GitHub, with nothing to change or undo (v1.4.0 or later in the deploy workflow):
+
+1. In GitHub: **Actions → Deploy → Run workflow**. Pick the branch and, in **decidio**, type `emergency:` and why. Or from a
+   terminal: `gh workflow run deploy.yml --ref main -f decidio="emergency: checkout is down, hotfix 4f2c1e"`
+2. The verify step tries Decidio, at `https://mcp.decidioai.com` only, three times over a few minutes. If Decidio answers at all,
+   the emergency route stays closed: ask for the deploy in Decidio as usual. If it can't be reached, and you started the run and
+   are an admin of the repository (the step asks GitHub), the deploy goes ahead. The run is marked "Emergency deploy, not approved
+   in Decidio", with your GitHub name.
+3. When Decidio is back, it finds the run, emails your workspace owner and asks your executive approver to review it. The evidence
+   export lists it as an emergency change, with that review's outcome.
+
+Only a repository admin can use it. A run started by a workflow's own token, another event, a re-run by someone else or a deploy
+job with no `environment:` is refused, and so is any `api-url` but Decidio's own. To roll back during an outage, run the deploy the
+same way on a branch at the older commit, but only if that commit's deploy workflow already uses v1.4.0 or later; otherwise revert on
+`main` and deploy that. On a public repository, the reason you type is visible to anyone, like the run itself.
+
 ## License
 
 MIT
